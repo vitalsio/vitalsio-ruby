@@ -7,7 +7,7 @@ module VitalsIO
     def initialize(apikey, server = nil)
       @apikey = apikey
       @base_uri = "https://vitals.io/api/1"
-      @server = server || `hostname`
+      @server = server || `hostname`.strip
     end
 
     @debug = false
