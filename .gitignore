@@ -1,9 +1,4 @@
 *.gem
-<<<<<<< HEAD
-.bundle
-Gemfile.lock
-pkg/*
-=======
 *.rbc
 .bundle
 .config
@@ -21,4 +16,3 @@ tmp
 .yardoc
 _yardoc
 doc/
->>>>>>> abdfbb69f4766b3b7195210c8bc785223c0702e6
