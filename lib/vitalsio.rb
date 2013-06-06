@@ -18,9 +18,13 @@ module VitalsIO
     def call_api(url, params)
       uri = URI.parse(url + "?".concat(params.find_all{|k,v| v != nil}.collect{|k, v| "#{k}=#{CGI.escape(v)}"}.join("&")))
       http = Net::HTTP.new(uri.host, uri.port)
+      http.read_timeout = 2
+      http.open_timeout = 2
       if uri.scheme == 'https'
         http.use_ssl = true
         http.ca_file = File.expand_path("../ca.crt", File.dirname(__FILE__))
+        http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+        http.verify_depth = 5
       end
       request = Net::HTTP::Get.new(uri.path + "?" + uri.query)
       puts ">>> " + request.path if @debug
@@ -66,9 +70,9 @@ module VitalsIO
       call_api("#{@base_uri}/#{CGI.escape(@apikey)}/#{CGI.escape(@server)}/#{CGI.escape(project)}/#{CGI.escape(task)}/error", params)
     end
 
-    def configure_task(project, isPropertyBased, task, priority, repeat_every)
+    def configure_task(project, property, task, priority, repeat_every)
       params = {}
-      params[:propertyBased] = "true" if isPropertyBased
+      params[:property] = property if property
       params[:priority] = priority
       params[:repeats] = repeat_every.to_s
 
