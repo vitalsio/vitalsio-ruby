@@ -3,6 +3,43 @@ require 'cgi'
 require 'uri'
 
 module VitalsIO
+  HIGHEST_PRIORITY = "highest"
+  HIGH_PRIORITY = "high"
+  NORMAL_PRIORITY = "normal"
+  LOW_PRIORITY = "low"
+  LOWEST_PRIORITY = "lowest"
+
+  def self.priority_string_to_int(priority)
+    case priority
+    when HIGHEST_PRIORITY
+      5
+    when HIGH_PRIORITY
+      4
+    when NORMAL_PRIORITY
+      3
+    when LOW_PRIORITY
+      2
+    when LOWEST_PRIORITY
+      1
+    else
+      3
+    end
+  end
+
+  def self.priority_int_to_string(priority)
+    if priority > 4
+      HIGHEST_PRIORITY
+    elsif priority > 3
+      HIGH_PRIORITY
+    elsif priority > 2
+      NORMAL_PRIORITY
+    elsif priority > 1
+      LOW_PRIORITY
+    else
+      LOWEST_PRIORITY
+    end
+  end
+
   class API
     def initialize(apikey, server = nil)
       @apikey = apikey
