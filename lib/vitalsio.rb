@@ -62,6 +62,13 @@ module VitalsIO
       call_api("#{@base_uri}/#{CGI.escape(@apikey)}/#{CGI.escape(@server)}/#{CGI.escape(project)}/#{CGI.escape(task)}/complete", params)
     end
 
+    def archive_task(project, property, task)
+      params = {}
+      params[:property] = property if property
+
+      call_api("#{@base_uri}/#{CGI.escape(@apikey)}/#{CGI.escape(@server)}/#{CGI.escape(project)}/#{CGI.escape(task)}/archive", params)
+    end
+
     def report_task_error(project, property, task, message)
       params = {}
       params[:property] = property if property
