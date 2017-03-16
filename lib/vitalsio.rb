@@ -59,9 +59,7 @@ module VitalsIO
       http.open_timeout = 2
       if uri.scheme == 'https'
         http.use_ssl = true
-        http.ca_file = File.expand_path("../ca.crt", File.dirname(__FILE__))
-        http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-        http.verify_depth = 5
+        http.verify_mode = OpenSSL::SSL::VERIFY_NONE
       end
       request = Net::HTTP::Get.new(uri.path + "?" + uri.query)
       puts ">>> " + request.path if @debug
