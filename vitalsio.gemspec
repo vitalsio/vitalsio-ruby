@@ -14,8 +14,7 @@ Gem::Specification.new do |s|
 
   s.files = [
       'VERSION',
-      'lib/vitalsio.rb',
-      'ca.crt'
+      'lib/vitalsio.rb'
   ]
   s.require_paths = ["lib"]
 
