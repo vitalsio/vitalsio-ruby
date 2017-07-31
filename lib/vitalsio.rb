@@ -1,6 +1,8 @@
 require 'net/https'
 require 'cgi'
 require 'uri'
+require 'redis'
+require 'json'
 
 module VitalsIO
   HIGHEST_PRIORITY = "highest"
@@ -15,8 +17,6 @@ module VitalsIO
       5
     when HIGH_PRIORITY
       4
-    when NORMAL_PRIORITY
-      3
     when LOW_PRIORITY
       2
     when LOWEST_PRIORITY
@@ -41,9 +41,14 @@ module VitalsIO
   end
 
   class API
-    def initialize(apikey, server = nil)
+    def initialize(apikey, redis = nil, server = nil)
       @apikey = apikey
-      @base_uri = "https://vitals.io/api/1"
+      if redis.nil?
+        @redis = Redis.new(host: 'mccoy.coreapps.xyz', port: 6370)
+        puts "Initialized VitalsIO::API without specifying a redis connection. Please pass in a redis connection."
+      else
+        @redis = redis
+      end
       @server = server || `hostname`.strip
     end
 
@@ -52,21 +57,17 @@ module VitalsIO
       @debug = true
     end
 
-    def call_api(url, params)
-      uri = URI.parse(url + "?".concat(params.find_all{|k,v| v != nil}.collect{|k, v| "#{k}=#{CGI.escape(v)}"}.join("&")))
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.read_timeout = 2
-      http.open_timeout = 2
-      if uri.scheme == 'https'
-        http.use_ssl = true
-        http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-      end
-      request = Net::HTTP::Get.new(uri.path + "?" + uri.query)
-      puts ">>> " + request.path if @debug
+    def call_api(method, params)
+      params[:server] = @server
+      ts = Time.now.to_i
       begin
-        response = http.request(request)
-        puts "<<< " + response.body if @debug
-        return response.body
+        @redis.lpush("vitalsio_api", {
+          method: method,
+          params: params,
+          timestamp: ts,
+          auth: Digest::SHA1.hexdigest(@server + ts.to_s + @apikey)
+        }.to_json)
+        return "OK"
       rescue => exc
         if @debug
           raise exc
@@ -77,48 +78,60 @@ module VitalsIO
 
     def start_task(project, property, task)
       params = {}
+      params[:project] = project if project
+      params[:task] = task if task
       params[:property] = property if property
 
-      call_api("#{@base_uri}/#{CGI.escape(@apikey)}/#{CGI.escape(@server)}/#{CGI.escape(project)}/#{CGI.escape(task)}/start", params)
+      call_api("start", params)
     end
 
     def task_progress(project, property, task, subtask)
       params = {}
+      params[:project] = project if project
+      params[:task] = task if task
       params[:property] = property if property
       params[:subtask] = subtask if subtask
 
-      call_api("#{@base_uri}/#{CGI.escape(@apikey)}/#{CGI.escape(@server)}/#{CGI.escape(project)}/#{CGI.escape(task)}/progress", params)
+      call_api("progress", params)
     end
 
     def complete_task(project, property, task)
       params = {}
+      params[:project] = project if project
+      params[:task] = task if task
       params[:property] = property if property
 
-      call_api("#{@base_uri}/#{CGI.escape(@apikey)}/#{CGI.escape(@server)}/#{CGI.escape(project)}/#{CGI.escape(task)}/complete", params)
+      call_api("complete", params)
     end
 
     def archive_task(project, property, task)
       params = {}
+      params[:project] = project if project
+      params[:task] = task if task
       params[:property] = property if property
 
-      call_api("#{@base_uri}/#{CGI.escape(@apikey)}/#{CGI.escape(@server)}/#{CGI.escape(project)}/#{CGI.escape(task)}/archive", params)
+      call_api("archive", params)
     end
 
     def report_task_error(project, property, task, message)
       params = {}
+      params[:project] = project if project
+      params[:task] = task if task
       params[:property] = property if property
       params[:error] = message
 
-      call_api("#{@base_uri}/#{CGI.escape(@apikey)}/#{CGI.escape(@server)}/#{CGI.escape(project)}/#{CGI.escape(task)}/error", params)
+      call_api("error", params)
     end
 
     def configure_task(project, property, task, priority, repeat_every)
       params = {}
       params[:property] = property if property
-      params[:priority] = priority
-      params[:repeats] = repeat_every.to_s
+      params[:project] = project if project
+      params[:task] = task if task
+      params[:priority] = VitalsIO.priority_string_to_int(priority)
+      params[:repeats] = repeat_every
 
-      call_api("#{@base_uri}/#{CGI.escape(@apikey)}/#{CGI.escape(@server)}/#{CGI.escape(project)}/#{CGI.escape(task)}/configure", params)
+      call_api("configure", params)
     end
 
     def configure_property(project, property, priority)
